@@ -1,0 +1,74 @@
+{
+  "session_metadata": {
+    "session_id": "session-2614920176144",
+    "client_ip": "1.2.3.4",
+    "username": "admin",
+    "start_time": "2026-02-04T17:32:49.082895Z",
+    "end_time": "2026-02-04T17:32:50.022053Z",
+    "duration_seconds": 0.939158,
+    "total_commands": 4
+  },
+  "session_analysis": {
+    "final_skill_level": "Low",
+    "skill_progression": "Stable - consistent skill level throughout",
+    "threat_summary": {
+      "primary_activity": "Recon",
+      "activity_breakdown": {
+        "Recon": 2,
+        "PrivEsc": 0,
+        "Persistence": 0,
+        "Network": 0,
+        "Other": 2
+      },
+      "recommendations": [
+        "INFO: Standard reconnaissance activity detected"
+      ]
+    }
+  },
+  "transcript": [
+    {
+      "sequence": 1,
+      "timestamp": "2026-02-04T17:32:49.369634Z",
+      "cwd": "/home/admin",
+      "command": "ls",
+      "output": "notes.txt  deploy.sh  backup.sql\n",
+      "analysis": {
+        "skill_level": "Low",
+        "intent": "Reconnaissance"
+      }
+    },
+    {
+      "sequence": 2,
+      "timestamp": "2026-02-04T17:32:49.667331Z",
+      "cwd": "/home/admin",
+      "command": "uname -a",
+      "output": "Linux prod-db-01 5.4.0-150-generic #167-Ubuntu SMP Mon May 15 17:35:05 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux\n",
+      "analysis": {
+        "skill_level": "Low",
+        "intent": "Reconnaissance"
+      }
+    },
+    {
+      "sequence": 3,
+      "timestamp": "2026-02-04T17:32:49.887034Z",
+      "cwd": "/home/admin",
+      "command": "history",
+      "output": "  1  journalctl -xe\n  2  git pull origin main\n  3  git pull origin main\n  4  docker logs web-1\n  5  ps aux | grep mysql\n  6  ./deploy.sh\n  7  scp admin@10.0.0.5:/backup/latest.tar.gz .\n  8  npm run deploy\n  9  id\n  10  journalctl -xe\n  11  df -h\n  12  mysql -u root -p\n  13  uptime\n  14  journalctl -xe\n  15  chmod +x deploy.sh\n  16  curl -I https://api.internal.com/health\n  17  netstat -tulpn\n  18  npm run deploy\n  19  ps aux | grep mysql\n  20  uptime\n  21  sudo apt update\n  22  sudo apt update\n  23  free -m\n  24  npm run deploy\n  25  sudo apt upgrade -y\n  26  crontab -l\n  27  wget http://backup.internal/db.sql\n  28  vim /etc/nginx/nginx.conf\n  29  crontab -l\n  30  npm run deploy\n  31  sudo systemctl status nginx\n  32  docker ps\n  33  ps aux | grep mysql\n  34  npm run deploy\n  35  ls -la\n  36  npm run deploy\n  37  whoami\n  38  sudo systemctl status nginx\n  39  vim /etc/nginx/nginx.conf\n  40  mysql -u root -p\n",
+      "analysis": {
+        "skill_level": "Low",
+        "intent": "Anti-Forensics"
+      }
+    },
+    {
+      "sequence": 4,
+      "timestamp": "2026-02-04T17:32:50.021053Z",
+      "cwd": "/home/admin",
+      "command": "env",
+      "output": "SHELL=/bin/bash\nPWD=/home/admin\nLOGNAME=admin\nHOME=/home/admin\nLANG=en_US.UTF-8\nUSER=admin\nTERM=xterm-256color\nPATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\nSSH_TTY=/dev/pts/0\nSSH_CLIENT=1.2.3.4 55432 22\nSSH_CONNECTION=1.2.3.4 55432 10.0.0.5 22\nMAIL=/var/mail/admin\n",
+      "analysis": {
+        "skill_level": "Low",
+        "intent": "Command Execution"
+      }
+    }
+  ]
+}

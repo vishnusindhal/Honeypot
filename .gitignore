@@ -1,0 +1,61 @@
+# ==========================================
+# AI Honeypot Project - .gitignore
+# ==========================================
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# ----- Node.js / React -----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ----- Vite Build -----
+dashboard/dist/
+dashboard/.vite/
+
+# ----- IDE / Editor -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ----- Sensitive Files -----
+# SSH Host Key (auto-generated, contains private key)
+honeypot_host_key.pem
+
+# Session logs (may contain sensitive attacker data)
+honeypot_audit.json
+session_recordings/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# ----- Logs -----
+*.log
+logs/
+
+# ----- OS Files -----
+Thumbs.db
+.DS_Store
+
+# ----- Temporary Files -----
+*.tmp
+*.temp
+.cache/
