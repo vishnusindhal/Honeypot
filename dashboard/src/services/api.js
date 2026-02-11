@@ -85,6 +85,11 @@ export const api = {
   // Get session recordings
   async getRecordings() {
     return fetchWithFallback(`${API_BASE_URL}/recordings`, []);
+  },
+
+  // Get attacker GeoIP location data for the threat map
+  async getAttackGeoData() {
+    return fetchWithFallback(`${API_BASE_URL}/attacks/geo`, []);
   }
 };
 

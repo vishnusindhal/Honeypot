@@ -5,6 +5,7 @@ import {
   Terminal, 
   Play, 
   BarChart3, 
+  Globe,
   Settings,
   Shield,
   Search,
@@ -18,6 +19,7 @@ const navItems = [
   { path: '/timeline', icon: Terminal, label: 'Command Timeline' },
   { path: '/replay', icon: Play, label: 'Session Replay' },
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
+  { path: '/threat-map', icon: Globe, label: 'Threat Map' },
   { path: '/settings', icon: Settings, label: 'Settings' },
 ]
 
@@ -79,6 +81,7 @@ function TopBar() {
       '/timeline': 'Command Timeline',
       '/replay': 'Session Replay',
       '/analytics': 'Analytics',
+      '/threat-map': 'Threat Map',
       '/settings': 'Settings'
     }
     return titles[location.pathname] || 'Dashboard'

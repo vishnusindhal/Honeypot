@@ -5,6 +5,7 @@ import LiveSessions from './pages/LiveSessions'
 import CommandTimeline from './pages/CommandTimeline'
 import SessionReplay from './pages/SessionReplay'
 import Analytics from './pages/Analytics'
+import ThreatMap from './pages/ThreatMap'
 import Settings from './pages/Settings'
 import './index.css'
 
@@ -18,6 +19,7 @@ function App() {
           <Route path="/timeline" element={<CommandTimeline />} />
           <Route path="/replay" element={<SessionReplay />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/threat-map" element={<ThreatMap />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

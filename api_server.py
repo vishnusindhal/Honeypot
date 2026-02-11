@@ -9,6 +9,7 @@ import json
 import os
 from datetime import datetime
 from collections import Counter
+from geoip_resolver import resolve_ip, is_private_ip
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
@@ -271,6 +272,81 @@ def get_recordings():
     return jsonify(recordings)
 
 
+@app.route('/api/attacks/geo', methods=['GET'])
+def get_attacks_geo():
+    """
+    Get geographic location data for all attacker IPs.
+    
+    Reads audit logs, extracts unique IPs, resolves each to
+    geographic coordinates using GeoIP, and returns enriched data.
+    
+    Returns:
+        JSON array of attacker locations:
+        [{
+            ip, country, city, latitude, longitude,
+            timestamp, attackType, commandCount, skillLevel
+        }]
+    """
+    logs = load_audit_logs()
+    
+    # Group logs by unique source IP to aggregate attack data
+    ip_data = {}
+    for log in logs:
+        ip = log.get('source_ip', 'unknown')
+        if ip == 'unknown':
+            continue
+        
+        if ip not in ip_data:
+            ip_data[ip] = {
+                'ip': ip,
+                'timestamp': log.get('timestamp', ''),
+                'attackType': log.get('command', {}).get('category', 'Unknown'),
+                'commandCount': 0,
+                'skillLevel': 'Low',
+                'sessions': set()
+            }
+        
+        ip_data[ip]['commandCount'] += 1
+        ip_data[ip]['sessions'].add(log.get('session_id', ''))
+        
+        # Track the highest skill level seen from this IP
+        skill = log.get('behavior_analysis', {}).get('skill_level', 'Low')
+        skill_priority = {'Low': 0, 'Medium': 1, 'High': 2}
+        if skill_priority.get(skill, 0) > skill_priority.get(ip_data[ip]['skillLevel'], 0):
+            ip_data[ip]['skillLevel'] = skill
+        
+        # Track the most dangerous attack type
+        attack_type = log.get('behavior_analysis', {}).get('intent', 'Unknown')
+        dangerous_intents = ['Privilege Escalation', 'Exfiltration/Network', 'Anti-Forensics']
+        if attack_type in dangerous_intents:
+            ip_data[ip]['attackType'] = attack_type
+    
+    # Resolve each IP to geographic coordinates
+    geo_results = []
+    for ip, data in ip_data.items():
+        # Get geographic location (real or simulated)
+        geo = resolve_ip(ip)
+        
+        geo_results.append({
+            'ip': data['ip'],
+            'country': geo['country'],
+            'city': geo['city'],
+            'latitude': geo['latitude'],
+            'longitude': geo['longitude'],
+            'timestamp': data['timestamp'],
+            'attackType': data['attackType'],
+            'commandCount': data['commandCount'],
+            'skillLevel': data['skillLevel'],
+            'sessionCount': len(data['sessions']),
+            'isSimulated': geo.get('source') == 'simulated'
+        })
+    
+    # Sort by command count (most active attackers first)
+    geo_results.sort(key=lambda x: x['commandCount'], reverse=True)
+    
+    return jsonify(geo_results)
+
+
 if __name__ == '__main__':
     print("[*] Starting Honeypot API Server...")
     print("[*] API available at http://localhost:5000")
@@ -283,4 +359,5 @@ if __name__ == '__main__':
     print("    GET /api/analytics/risk-distribution")
     print("    GET /api/analytics/timeline")
     print("    GET /api/session/<id>/replay")
+    print("    GET /api/attacks/geo")
     app.run(host='0.0.0.0', port=5000, debug=True)
