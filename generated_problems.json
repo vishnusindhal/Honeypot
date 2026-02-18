@@ -1,0 +1,265 @@
+[
+  {
+    "id": 1,
+    "statement": "If α satisfies α³ = 5, compute (α − 1)(α² + α + 1).",
+    "alpha_definition": "α³ = 5",
+    "root_degree": 3,
+    "root_value": 5,
+    "answer": 4,
+    "difficulty": "medium",
+    "category": "difference_of_cubes",
+    "solution_steps": [
+      "Recognize the difference of cubes: x³ − 1 = (x − 1)(x² + x + 1).",
+      "Therefore (α − 1)(α² + α + 1) = α³ − 1 = 5 − 1 = 4."
+    ]
+  },
+  {
+    "id": 2,
+    "statement": "If α = ∛2, compute (α + 2)(α² − 2α + 4).",
+    "alpha_definition": "α³ = 2",
+    "root_degree": 3,
+    "root_value": 2,
+    "answer": 10,
+    "difficulty": "medium",
+    "category": "sum_of_cubes",
+    "solution_steps": [
+      "Recognize the sum of cubes: x³ + a³ = (x + a)(x² − ax + a²).",
+      "With a = 2: (α + 2)(α² − 2α + 4) = α³ + 8 = 2 + 8 = 10."
+    ]
+  },
+  {
+    "id": 3,
+    "statement": "If α⁵ = 3, compute (α − 1)(α⁴ + α³ + α² + α + 1).",
+    "alpha_definition": "α⁵ = 3",
+    "root_degree": 5,
+    "root_value": 3,
+    "answer": 2,
+    "difficulty": "medium",
+    "category": "difference_of_5th_powers",
+    "solution_steps": [
+      "The geometric series factorization gives x⁵ − 1 = (x − 1)(x⁴ + x³ + x² + x + 1).",
+      "Therefore (α − 1)(α⁴ + α³ + α² + α + 1) = α⁵ − 1 = 3 − 1 = 2."
+    ]
+  },
+  {
+    "id": 4,
+    "statement": "If α = ∛2, compute (α − 2)(α² + 2α + 4)(α + 2)(α² − 2α + 4).",
+    "alpha_definition": "α³ = 2",
+    "root_degree": 3,
+    "root_value": 2,
+    "answer": -60,
+    "difficulty": "hard",
+    "category": "double_cube_factorization",
+    "solution_steps": [
+      "Group the first two factors: (α − 2)(α² + 2α + 4) = α³ − 8 = 2 − 8 = −6.",
+      "Group the last two factors: (α + 2)(α² − 2α + 4) = α³ + 8 = 2 + 8 = 10.",
+      "Product = (−6)(10) = −60."
+    ]
+  },
+  {
+    "id": 5,
+    "statement": "If α³ = 10, compute (α − 2)(α² + 2α + 4)(α + 1)(α² − α + 1).",
+    "alpha_definition": "α³ = 10",
+    "root_degree": 3,
+    "root_value": 10,
+    "answer": 22,
+    "difficulty": "hard",
+    "category": "mixed_cube_factorization",
+    "solution_steps": [
+      "Recognize two separate cube factorizations:",
+      "  (α − 2)(α² + 2α + 4) = α³ − 8 = 10 − 8 = 2.",
+      "  (α + 1)(α² − α + 1) = α³ + 1 = 10 + 1 = 11.",
+      "Product = 2 × 11 = 22."
+    ]
+  },
+  {
+    "id": 6,
+    "statement": "If α³ = 4, compute (α² + 2)(α⁴ − 2α² + 4).",
+    "alpha_definition": "α³ = 4",
+    "root_degree": 3,
+    "root_value": 4,
+    "answer": 24,
+    "difficulty": "hard",
+    "category": "sum_of_cubes_higher_base",
+    "solution_steps": [
+      "Let u = α². Recognize the sum of cubes: u³ + 2³ = (u + 2)(u² − 2u + 4).",
+      "So (α² + 2)(α⁴ − 2α² + 4) = (α²)³ + 8 = α⁶ + 8.",
+      "Since α³ = 4, we have α⁶ = (α³)² = 16.",
+      "Answer = 16 + 8 = 24."
+    ]
+  },
+  {
+    "id": 7,
+    "statement": "If α³ = 7, compute (α − 1)(α² + α + 1)(α⁶ + α³ + 1).",
+    "alpha_definition": "α³ = 7",
+    "root_degree": 3,
+    "root_value": 7,
+    "answer": 342,
+    "difficulty": "hard",
+    "category": "nested_cube_telescoping",
+    "solution_steps": [
+      "First: (α − 1)(α² + α + 1) = α³ − 1 = 7 − 1 = 6.",
+      "Now recognize another level: (α³ − 1)(α⁶ + α³ + 1) = (α³)³ − 1 = α⁹ − 1.",
+      "(Setting t = α³, this is (t−1)(t²+t+1) = t³−1.)",
+      "α⁹ = (α³)³ = 7³ = 343.",
+      "Answer = 343 − 1 = 342."
+    ]
+  },
+  {
+    "id": 8,
+    "statement": "If α⁶ = 5, compute (α − 1)(α² − α + 1)(α + 1)(α² + α + 1).",
+    "alpha_definition": "α⁶ = 5",
+    "root_degree": 6,
+    "root_value": 5,
+    "answer": 4,
+    "difficulty": "hard",
+    "category": "cross_paired_factorization",
+    "solution_steps": [
+      "The factors are presented in misleading order. Regroup:",
+      "  (α − 1)(α² + α + 1) = α³ − 1   [pair 1st and 4th factors]",
+      "  (α + 1)(α² − α + 1) = α³ + 1   [pair 3rd and 2nd factors]",
+      "Product = (α³ − 1)(α³ + 1) = α⁶ − 1 = 5 − 1 = 4."
+    ]
+  },
+  {
+    "id": 9,
+    "statement": "If α satisfies α⁴ = 3 (positive real fourth root), compute (α² + α + 1)(α² − α + 1)(α⁴ − α² + 1).",
+    "alpha_definition": "α⁴ = 3",
+    "root_degree": 4,
+    "root_value": 3,
+    "answer": 13,
+    "difficulty": "hard",
+    "category": "cyclotomic_product",
+    "solution_steps": [
+      "(α² + α + 1)(α² − α + 1) = (α²+1)² − α² = α⁴ + α² + 1.",
+      "Then (α⁴ + α² + 1)(α⁴ − α² + 1) = (α⁴+1)² − α⁴ = α⁸ + α⁴ + 1.",
+      "Since α⁴ = 3: α⁸ = (α⁴)² = 9.",
+      "Answer = 9 + 3 + 1 = 13."
+    ]
+  },
+  {
+    "id": 10,
+    "statement": "If α⁴ = 3, compute (α − 1)(α + 1)(α² + 1)(α⁴ + 1)(α⁸ + 1).",
+    "alpha_definition": "α⁴ = 3",
+    "root_degree": 4,
+    "root_value": 3,
+    "answer": 80,
+    "difficulty": "hard",
+    "category": "telescoping_squares",
+    "solution_steps": [
+      "Telescope via difference of squares:",
+      "  (α − 1)(α + 1) = α² − 1.",
+      "  (α² − 1)(α² + 1) = α⁴ − 1.",
+      "  (α⁴ − 1)(α⁴ + 1) = α⁸ − 1.",
+      "  (α⁸ − 1)(α⁸ + 1) = α¹⁶ − 1.",
+      "Since α⁴ = 3: α¹⁶ = (α⁴)⁴ = 3⁴ = 81.",
+      "Answer = 81 − 1 = 80."
+    ]
+  },
+  {
+    "id": 11,
+    "statement": "If α³ = 5, compute (α − 1)(α² + α + 1)(α + 2)(α² − 2α + 4).",
+    "alpha_definition": "α³ = 5",
+    "root_degree": 3,
+    "root_value": 5,
+    "answer": 52,
+    "difficulty": "hard",
+    "category": "mixed_cube_factorization",
+    "solution_steps": [
+      "Group: (α − 1)(α² + α + 1) = α³ − 1 = 5 − 1 = 4.",
+      "Group: (α + 2)(α² − 2α + 4) = α³ + 8 = 5 + 8 = 13.",
+      "Product = 4 × 13 = 52."
+    ]
+  },
+  {
+    "id": 12,
+    "statement": "If α⁵ = 3, compute (α − 1)(α + 1)(α⁴ + α³ + α² + α + 1)(α⁴ − α³ + α² − α + 1).",
+    "alpha_definition": "α⁵ = 3",
+    "root_degree": 5,
+    "root_value": 3,
+    "answer": 8,
+    "difficulty": "very_hard",
+    "category": "fifth_root_chain",
+    "solution_steps": [
+      "Pair factors carefully:",
+      "  (α − 1)(α⁴ + α³ + α² + α + 1) = α⁵ − 1 = 3 − 1 = 2.",
+      "  (α + 1)(α⁴ − α³ + α² − α + 1) = α⁵ + 1 = 3 + 1 = 4.",
+      "Product = 2 × 4 = 8.",
+      "(Equivalently: (α⁵ − 1)(α⁵ + 1) = α¹⁰ − 1 = 9 − 1 = 8.)"
+    ]
+  },
+  {
+    "id": 13,
+    "statement": "If α = ∛2, compute (α − 1)(α + 1)(α² + α + 1)(α² − α + 1)(α⁶ + α³ + 1)(α⁶ − α³ + 1).",
+    "alpha_definition": "α³ = 2",
+    "root_degree": 3,
+    "root_value": 2,
+    "answer": 63,
+    "difficulty": "very_hard",
+    "category": "multi_level_telescoping",
+    "solution_steps": [
+      "Layer 1 — Difference/sum of cubes:",
+      "  (α − 1)(α² + α + 1) = α³ − 1 = 1.",
+      "  (α + 1)(α² − α + 1) = α³ + 1 = 3.",
+      "  Product so far: 1 × 3 = 3, i.e., α⁶ − 1.",
+      "",
+      "Layer 2 — Cyclotomic product:",
+      "  (α⁶ + α³ + 1)(α⁶ − α³ + 1) = (α⁶ + 1)² − (α³)² = α¹² + α⁶ + 1.",
+      "  (Using (a+b)(a−b) with a = α⁶+1, b = α³.)",
+      "",
+      "Layer 3 — Difference of cubes with base α⁶:",
+      "  (α⁶ − 1)(α¹² + α⁶ + 1) = (α⁶)³ − 1 = α¹⁸ − 1.",
+      "  α¹⁸ = (α³)⁶ = 2⁶ = 64.",
+      "  Answer = 64 − 1 = 63."
+    ]
+  },
+  {
+    "id": 14,
+    "statement": "If α⁴ = 5, compute (α² − 1)(α⁴ + α² + 1)(α⁶ + 1).",
+    "alpha_definition": "α⁴ = 5",
+    "root_degree": 4,
+    "root_value": 5,
+    "answer": 124,
+    "difficulty": "very_hard",
+    "category": "nested_cube_square_telescoping",
+    "solution_steps": [
+      "Recognize (α² − 1)(α⁴ + α² + 1) = (α²)³ − 1 = α⁶ − 1 [difference of cubes].",
+      "Then (α⁶ − 1)(α⁶ + 1) = α¹² − 1 [difference of squares].",
+      "Since α⁴ = 5: α¹² = (α⁴)³ = 125.",
+      "Answer = 125 − 1 = 124."
+    ]
+  },
+  {
+    "id": 15,
+    "statement": "If α⁷ = 2, compute\n(α − 1)(α + 1)(α⁶ + α⁵ + α⁴ + α³ + α² + α + 1)(α⁶ − α⁵ + α⁴ − α³ + α² − α + 1).",
+    "alpha_definition": "α⁷ = 2",
+    "root_degree": 7,
+    "root_value": 2,
+    "answer": 3,
+    "difficulty": "very_hard",
+    "category": "seventh_root_chain",
+    "solution_steps": [
+      "Pair factors for the 7th-power identities:",
+      "  (α − 1)(α⁶ + α⁵ + α⁴ + α³ + α² + α + 1) = α⁷ − 1 = 1.",
+      "  (α + 1)(α⁶ − α⁵ + α⁴ − α³ + α² − α + 1) = α⁷ + 1 = 3.",
+      "Product = 1 × 3 = 3.",
+      "(Equivalently: α¹⁴ − 1 = (α⁷)² − 1 = 4 − 1 = 3.)"
+    ]
+  },
+  {
+    "id": 16,
+    "statement": "If α³ = 3, compute (α + 1)(α² − α + 1)(α³ − 1)(α⁶ + α³ + 1).",
+    "alpha_definition": "α³ = 3",
+    "root_degree": 3,
+    "root_value": 3,
+    "answer": 104,
+    "difficulty": "hard",
+    "category": "mixed_nested_cubes",
+    "solution_steps": [
+      "(α + 1)(α² − α + 1) = α³ + 1 = 4.",
+      "(α³ − 1)(α⁶ + α³ + 1) = (α³)³ − 1 = α⁹ − 1 = 27 − 1 = 26.",
+      "Product = 4 × 26 = 104.",
+      "(Alternative: Note α³ − 1 = 2 and α⁶ + α³ + 1 = 13, so 4 × 2 × 13 = 104.)"
+    ]
+  }
+]
