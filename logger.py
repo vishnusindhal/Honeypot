@@ -1,15 +1,16 @@
-import json
 import uuid
 from datetime import datetime
+from database import get_db
+
 
 class HoneypotLogger:
-    def __init__(self, log_file="honeypot_audit.json"):
-        self.log_file = log_file
+    def __init__(self):
+        self.db = get_db()
 
-    def log_command(self, session_id, source_ip, username, command_str, 
-                    cwd, skill_level="Low", intent="Unknown", 
+    def log_command(self, session_id, source_ip, username, command_str,
+                    cwd, skill_level="Low", intent="Unknown",
                     severity="Low", response_type="success"):
-        
+
         entry = {
             "log_id": str(uuid.uuid4()),
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -25,7 +26,7 @@ class HoneypotLogger:
             "system_context": {
                 "cwd": cwd,
                 "privilege_level": "root" if username == "root" else "user",
-                "environment_snapshot": "hash_placeholder" 
+                "environment_snapshot": "hash_placeholder"
             },
             "behavior_analysis": {
                 "intent": intent,
@@ -34,8 +35,8 @@ class HoneypotLogger:
             },
             "threat_assessment": {
                 "severity": severity,
-                "tactic": "Discovery", # logical default, can be dynamic
-                "technique": "T1059"   # Command and Scripting Interpreter
+                "tactic": "Discovery",
+                "technique": "T1059"
             },
             "response_metadata": {
                 "response_type": response_type,
@@ -44,8 +45,10 @@ class HoneypotLogger:
             }
         }
 
-        with open(self.log_file, "a") as f:
-            f.write(json.dumps(entry) + "\n")
+        try:
+            self.db.commands.insert_one(entry)
+        except Exception as e:
+            print(f"[Logger] MongoDB write error: {e}")
 
     def _categorize_command(self, cmd):
         cmd = cmd.strip().split()[0] if cmd.strip() else ""
@@ -53,7 +56,7 @@ class HoneypotLogger:
         priv_esc = ["sudo", "su", "chmod"]
         persistence = ["crontab", "systemctl"]
         net = ["wget", "curl", "netstat", "ss"]
-        
+
         if cmd in recon: return "Recon"
         if cmd in priv_esc: return "PrivEsc"
         if cmd in persistence: return "Persistence"

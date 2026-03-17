@@ -1,80 +1,81 @@
 """
 API Server for Honeypot Dashboard
-Serves live data from honeypot_audit.json and session_recordings/
+==================================
+Serves live data from MongoDB (honeypot_db).
+
+Collections used:
+  - commands        : Individual attacker commands
+  - sessions        : Session metadata + analysis
+  - session_replays : Full transcripts for replay
 """
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-import json
-import os
 from datetime import datetime
-from collections import Counter
+from database import get_db
 from geoip_resolver import resolve_ip, is_private_ip
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
-# Paths
-AUDIT_LOG_PATH = "honeypot_audit.json"
-SESSION_RECORDINGS_PATH = "session_recordings"
 
-
-def load_audit_logs():
-    """Load all logs from honeypot_audit.json (NDJSON format)."""
-    logs = []
-    if os.path.exists(AUDIT_LOG_PATH):
-        with open(AUDIT_LOG_PATH, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line:
-                    try:
-                        logs.append(json.loads(line))
-                    except json.JSONDecodeError:
-                        continue
-    return logs
-
-
-def get_session_recordings():
-    """Get list of session recording files."""
-    recordings = []
-    if os.path.exists(SESSION_RECORDINGS_PATH):
-        for filename in os.listdir(SESSION_RECORDINGS_PATH):
-            if filename.endswith('.json'):
-                filepath = os.path.join(SESSION_RECORDINGS_PATH, filename)
-                try:
-                    with open(filepath, 'r') as f:
-                        data = json.load(f)
-                        recordings.append(data)
-                except:
-                    continue
-    return recordings
-
+# =========================================================================
+# HEALTH CHECK
+# =========================================================================
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint."""
-    return jsonify({"status": "ok", "timestamp": datetime.utcnow().isoformat() + "Z"})
+    try:
+        db = get_db()
+        db.command("ping")
+        return jsonify({
+            "status": "ok",
+            "database": "connected",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "degraded",
+            "database": str(e),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }), 500
 
+
+# =========================================================================
+# DASHBOARD METRICS
+# =========================================================================
 
 @app.route('/api/metrics', methods=['GET'])
 def get_metrics():
     """Get dashboard metrics."""
-    logs = load_audit_logs()
-    
+    db = get_db()
+
     # Count unique sessions
-    sessions = set(log.get('session_id', '') for log in logs)
-    active_sessions = len(sessions)
-    
+    active_sessions = len(db.commands.distinct("session_id"))
+
     # Count total commands
-    total_commands = len(logs)
-    
+    total_commands = db.commands.count_documents({})
+
     # Count high-risk actions
-    high_risk = sum(1 for log in logs 
-                    if log.get('behavior_analysis', {}).get('skill_level') == 'High')
-    
-    # Calculate average session duration (placeholder)
-    avg_duration = "12m 30s"
-    
+    high_risk = db.commands.count_documents({
+        "behavior_analysis.skill_level": "High"
+    })
+
+    # Calculate average session duration from sessions collection
+    pipeline = [
+        {"$match": {"duration_seconds": {"$gt": 0}}},
+        {"$group": {"_id": None, "avg_duration": {"$avg": "$duration_seconds"}}}
+    ]
+    result = list(db.sessions.aggregate(pipeline))
+    if result:
+        avg_secs = result[0]["avg_duration"]
+        mins = int(avg_secs // 60)
+        secs = int(avg_secs % 60)
+        avg_duration = f"{mins}m {secs}s"
+    else:
+        avg_duration = "0m 0s"
+
     return jsonify({
         "activeSessions": active_sessions,
         "totalCommands": total_commands,
@@ -83,272 +84,347 @@ def get_metrics():
     })
 
 
+# =========================================================================
+# SESSIONS
+# =========================================================================
+
 @app.route('/api/sessions', methods=['GET'])
 def get_sessions():
     """Get list of all sessions with summary data."""
-    logs = load_audit_logs()
-    
-    # Group logs by session
-    session_data = {}
-    for log in logs:
-        session_id = log.get('session_id', 'unknown')
-        if session_id not in session_data:
-            session_data[session_id] = {
-                'id': session_id,
-                'ip': log.get('source_ip', 'unknown'),
-                'country': 'Unknown',  # Would need GeoIP for real data
-                'countryCode': 'UN',
-                'username': log.get('username', 'unknown'),
-                'skillLevel': 'Low',
-                'riskLevel': 'Low',
-                'startTime': log.get('timestamp', ''),
-                'status': 'Ended',
-                'commandCount': 0,
-                'lastCommand': '',
-                'commands': []
-            }
-        
-        session_data[session_id]['commandCount'] += 1
-        session_data[session_id]['lastCommand'] = log.get('command', {}).get('raw_input', '')
-        session_data[session_id]['commands'].append(log)
-        
-        # Update skill level to highest seen
-        skill = log.get('behavior_analysis', {}).get('skill_level', 'Low')
-        if skill == 'High':
-            session_data[session_id]['skillLevel'] = 'High'
-            session_data[session_id]['riskLevel'] = 'Critical'
-        elif skill == 'Medium' and session_data[session_id]['skillLevel'] != 'High':
-            session_data[session_id]['skillLevel'] = 'Medium'
-            session_data[session_id]['riskLevel'] = 'High'
-    
-    # Convert to list and sort by timestamp (most recent first)
-    sessions = list(session_data.values())
-    sessions.sort(key=lambda x: x['startTime'], reverse=True)
-    
+    db = get_db()
+
+    # Try sessions collection first (has rich data from SessionRecorder)
+    sessions_from_db = list(db.sessions.find({}, {"_id": 0}).sort("start_time", -1))
+
+    if sessions_from_db:
+        # Format for frontend compatibility
+        sessions = []
+        for s in sessions_from_db:
+            sessions.append({
+                "id": s.get("session_id", ""),
+                "ip": s.get("client_ip", "unknown"),
+                "country": "Unknown",
+                "countryCode": "UN",
+                "username": s.get("username", "unknown"),
+                "skillLevel": s.get("final_skill_level", "Low"),
+                "riskLevel": "Critical" if s.get("final_skill_level") == "High" else
+                             "High" if s.get("final_skill_level") == "Medium" else "Low",
+                "startTime": s.get("start_time", ""),
+                "status": "Ended" if s.get("end_time") else "Active",
+                "commandCount": s.get("total_commands", 0),
+                "lastCommand": s.get("last_command", "")
+            })
+        return jsonify(sessions)
+
+    # Fallback: aggregate from commands collection
+    pipeline = [
+        {"$group": {
+            "_id": "$session_id",
+            "ip": {"$first": "$source_ip"},
+            "username": {"$first": "$username"},
+            "startTime": {"$first": "$timestamp"},
+            "commandCount": {"$sum": 1},
+            "lastCommand": {"$last": "$command.raw_input"},
+            "skills": {"$push": "$behavior_analysis.skill_level"}
+        }},
+        {"$sort": {"startTime": -1}}
+    ]
+    results = list(db.commands.aggregate(pipeline))
+
+    sessions = []
+    for r in results:
+        # Determine highest skill level
+        skill = "Low"
+        if "High" in r.get("skills", []):
+            skill = "High"
+        elif "Medium" in r.get("skills", []):
+            skill = "Medium"
+
+        sessions.append({
+            "id": r["_id"],
+            "ip": r.get("ip", "unknown"),
+            "country": "Unknown",
+            "countryCode": "UN",
+            "username": r.get("username", "unknown"),
+            "skillLevel": skill,
+            "riskLevel": "Critical" if skill == "High" else "High" if skill == "Medium" else "Low",
+            "startTime": r.get("startTime", ""),
+            "status": "Ended",
+            "commandCount": r.get("commandCount", 0),
+            "lastCommand": r.get("lastCommand", "")
+        })
+
     return jsonify(sessions)
 
 
+# =========================================================================
+# COMMANDS
+# =========================================================================
+
 @app.route('/api/commands', methods=['GET'])
 def get_commands():
-    """Get list of all commands with details."""
-    logs = load_audit_logs()
-    
+    """Get list of all commands with details (most recent 100)."""
+    db = get_db()
+
+    cursor = db.commands.find({}, {"_id": 0}).sort("timestamp", -1).limit(100)
+
     commands = []
-    for i, log in enumerate(reversed(logs)):  # Most recent first
-        cmd = log.get('command', {})
-        behavior = log.get('behavior_analysis', {})
-        
+    for i, log in enumerate(cursor):
+        cmd = log.get("command", {})
+        behavior = log.get("behavior_analysis", {})
+
         commands.append({
-            'id': i + 1,
-            'sessionId': log.get('session_id', ''),
-            'timestamp': log.get('timestamp', ''),
-            'command': cmd.get('raw_input', ''),
-            'category': behavior.get('intent', 'Unknown'),
-            'intent': behavior.get('intent', 'Unknown'),
-            'skillLevel': behavior.get('skill_level', 'Low'),
-            'output': ''  # Output not stored in current log format
+            "id": i + 1,
+            "sessionId": log.get("session_id", ""),
+            "timestamp": log.get("timestamp", ""),
+            "command": cmd.get("raw_input", ""),
+            "category": behavior.get("intent", "Unknown"),
+            "intent": behavior.get("intent", "Unknown"),
+            "skillLevel": behavior.get("skill_level", "Low"),
+            "output": ""
         })
-    
-    # Limit to most recent 100
-    return jsonify(commands[:100])
+
+    return jsonify(commands)
 
 
 @app.route('/api/commands/frequency', methods=['GET'])
 def get_command_frequency():
     """Get command frequency data for charts."""
-    logs = load_audit_logs()
-    
-    # Count commands
-    command_counts = Counter()
-    for log in logs:
-        cmd = log.get('command', {}).get('normalized', '').split()[0] if log.get('command', {}).get('normalized') else ''
-        if cmd:
-            command_counts[cmd] += 1
-    
-    # Get top 10
-    top_commands = [
-        {"name": cmd, "count": count, "category": "Command"}
-        for cmd, count in command_counts.most_common(10)
+    db = get_db()
+
+    pipeline = [
+        {"$project": {
+            "base_cmd": {
+                "$arrayElemAt": [
+                    {"$split": [{"$ifNull": ["$command.normalized", ""]}, " "]},
+                    0
+                ]
+            }
+        }},
+        {"$match": {"base_cmd": {"$ne": ""}}},
+        {"$group": {"_id": "$base_cmd", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
     ]
-    
+
+    results = list(db.commands.aggregate(pipeline))
+
+    top_commands = [
+        {"name": r["_id"], "count": r["count"], "category": "Command"}
+        for r in results
+    ]
+
     return jsonify(top_commands)
 
+
+# =========================================================================
+# ANALYTICS
+# =========================================================================
 
 @app.route('/api/analytics/risk-distribution', methods=['GET'])
 def get_risk_distribution():
     """Get risk level distribution for charts."""
-    logs = load_audit_logs()
-    
-    # Count by skill level
-    skill_counts = Counter(
-        log.get('behavior_analysis', {}).get('skill_level', 'Low')
-        for log in logs
-    )
-    
-    total = len(logs) or 1
-    
-    distribution = [
-        {"name": "Critical", "value": round(skill_counts.get('High', 0) / total * 100), "color": "#ef4444"},
-        {"name": "High", "value": round(skill_counts.get('Medium', 0) / total * 50), "color": "#f97316"},
-        {"name": "Medium", "value": round(skill_counts.get('Medium', 0) / total * 50), "color": "#eab308"},
-        {"name": "Low", "value": round(skill_counts.get('Low', 0) / total * 100), "color": "#22c55e"}
+    db = get_db()
+
+    pipeline = [
+        {"$group": {
+            "_id": "$behavior_analysis.skill_level",
+            "count": {"$sum": 1}
+        }}
     ]
-    
+    results = list(db.commands.aggregate(pipeline))
+    skill_counts = {r["_id"]: r["count"] for r in results}
+
+    total = sum(skill_counts.values()) or 1
+
+    distribution = [
+        {"name": "Critical", "value": round(skill_counts.get("High", 0) / total * 100), "color": "#ef4444"},
+        {"name": "High", "value": round(skill_counts.get("Medium", 0) / total * 50), "color": "#f97316"},
+        {"name": "Medium", "value": round(skill_counts.get("Medium", 0) / total * 50), "color": "#eab308"},
+        {"name": "Low", "value": round(skill_counts.get("Low", 0) / total * 100), "color": "#22c55e"}
+    ]
+
     return jsonify(distribution)
 
 
 @app.route('/api/analytics/timeline', methods=['GET'])
 def get_timeline():
     """Get command timeline data for charts."""
-    logs = load_audit_logs()
-    
-    # Group by hour
-    hour_counts = Counter()
-    for log in logs:
-        timestamp = log.get('timestamp', '')
-        if timestamp:
-            try:
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                hour = dt.strftime('%H:00')
-                hour_counts[hour] += 1
-            except:
-                continue
-    
-    # Create timeline data
-    timeline = [
-        {"time": hour, "commands": count}
-        for hour, count in sorted(hour_counts.items())
+    db = get_db()
+
+    pipeline = [
+        {"$match": {"timestamp": {"$ne": ""}}},
+        {"$project": {
+            "hour": {
+                "$substr": ["$timestamp", 11, 5]
+            }
+        }},
+        {"$group": {"_id": "$hour", "count": {"$sum": 1}}},
+        {"$sort": {"_id": 1}}
     ]
-    
+
+    results = list(db.commands.aggregate(pipeline))
+
+    timeline = [
+        {"time": r["_id"], "commands": r["count"]}
+        for r in results
+    ]
+
     return jsonify(timeline)
 
 
 @app.route('/api/analytics/skill-distribution', methods=['GET'])
 def get_skill_distribution():
     """Get skill level distribution for heatmap."""
-    logs = load_audit_logs()
-    
-    # Count by skill level
-    skill_counts = Counter(
-        log.get('behavior_analysis', {}).get('skill_level', 'Low')
-        for log in logs
-    )
-    
-    total = len(logs) or 1
-    
-    distribution = [
-        {"name": "High", "value": round(skill_counts.get('High', 0) / total * 100), "color": "#ef4444"},
-        {"name": "Medium", "value": round(skill_counts.get('Medium', 0) / total * 100), "color": "#f97316"},
-        {"name": "Low", "value": round(skill_counts.get('Low', 0) / total * 100), "color": "#22c55e"}
+    db = get_db()
+
+    pipeline = [
+        {"$group": {
+            "_id": "$behavior_analysis.skill_level",
+            "count": {"$sum": 1}
+        }}
     ]
-    
+    results = list(db.commands.aggregate(pipeline))
+    skill_counts = {r["_id"]: r["count"] for r in results}
+
+    total = sum(skill_counts.values()) or 1
+
+    distribution = [
+        {"name": "High", "value": round(skill_counts.get("High", 0) / total * 100), "color": "#ef4444"},
+        {"name": "Medium", "value": round(skill_counts.get("Medium", 0) / total * 100), "color": "#f97316"},
+        {"name": "Low", "value": round(skill_counts.get("Low", 0) / total * 100), "color": "#22c55e"}
+    ]
+
     return jsonify(distribution)
 
+
+# =========================================================================
+# SESSION REPLAY
+# =========================================================================
 
 @app.route('/api/session/<session_id>/replay', methods=['GET'])
 def get_session_replay(session_id):
     """Get session replay data for a specific session."""
-    logs = load_audit_logs()
-    
-    # Filter logs for this session
-    session_logs = [log for log in logs if log.get('session_id') == session_id]
-    
-    # Convert to replay format
+    db = get_db()
+
+    replay = db.session_replays.find_one(
+        {"session_id": session_id},
+        {"_id": 0}
+    )
+
+    if replay and "transcript" in replay:
+        replay_data = []
+        for i, entry in enumerate(replay["transcript"]):
+            replay_data.append({
+                "timestamp": i * 2000,
+                "command": entry.get("command", ""),
+                "output": entry.get("output", "")
+            })
+        return jsonify(replay_data)
+
+    # Fallback: build from commands collection
+    commands = list(db.commands.find(
+        {"session_id": session_id},
+        {"_id": 0}
+    ).sort("timestamp", 1))
+
     replay_data = []
-    for i, log in enumerate(session_logs):
+    for i, cmd in enumerate(commands):
         replay_data.append({
-            'timestamp': i * 2000,  # 2 seconds apart
-            'command': log.get('command', {}).get('raw_input', ''),
-            'output': ''  # Would need to store outputs
+            "timestamp": i * 2000,
+            "command": cmd.get("command", {}).get("raw_input", ""),
+            "output": ""
         })
-    
+
     return jsonify(replay_data)
 
 
 @app.route('/api/recordings', methods=['GET'])
 def get_recordings():
     """Get list of session recordings."""
-    recordings = get_session_recordings()
+    db = get_db()
+
+    recordings = list(db.session_replays.find({}, {"_id": 0}))
     return jsonify(recordings)
 
+
+# =========================================================================
+# GEO ATTACKS
+# =========================================================================
 
 @app.route('/api/attacks/geo', methods=['GET'])
 def get_attacks_geo():
     """
     Get geographic location data for all attacker IPs.
-    
-    Reads audit logs, extracts unique IPs, resolves each to
-    geographic coordinates using GeoIP, and returns enriched data.
-    
-    Returns:
-        JSON array of attacker locations:
-        [{
-            ip, country, city, latitude, longitude,
-            timestamp, attackType, commandCount, skillLevel
-        }]
+
+    Aggregates data from commands collection, groups by IP,
+    resolves each to geographic coordinates using GeoIP.
     """
-    logs = load_audit_logs()
-    
-    # Group logs by unique source IP to aggregate attack data
-    ip_data = {}
-    for log in logs:
-        ip = log.get('source_ip', 'unknown')
-        if ip == 'unknown':
-            continue
-        
-        if ip not in ip_data:
-            ip_data[ip] = {
-                'ip': ip,
-                'timestamp': log.get('timestamp', ''),
-                'attackType': log.get('command', {}).get('category', 'Unknown'),
-                'commandCount': 0,
-                'skillLevel': 'Low',
-                'sessions': set()
-            }
-        
-        ip_data[ip]['commandCount'] += 1
-        ip_data[ip]['sessions'].add(log.get('session_id', ''))
-        
-        # Track the highest skill level seen from this IP
-        skill = log.get('behavior_analysis', {}).get('skill_level', 'Low')
-        skill_priority = {'Low': 0, 'Medium': 1, 'High': 2}
-        if skill_priority.get(skill, 0) > skill_priority.get(ip_data[ip]['skillLevel'], 0):
-            ip_data[ip]['skillLevel'] = skill
-        
-        # Track the most dangerous attack type
-        attack_type = log.get('behavior_analysis', {}).get('intent', 'Unknown')
-        dangerous_intents = ['Privilege Escalation', 'Exfiltration/Network', 'Anti-Forensics']
-        if attack_type in dangerous_intents:
-            ip_data[ip]['attackType'] = attack_type
-    
-    # Resolve each IP to geographic coordinates
+    db = get_db()
+
+    # Aggregate by IP
+    pipeline = [
+        {"$match": {"source_ip": {"$ne": "unknown"}}},
+        {"$group": {
+            "_id": "$source_ip",
+            "timestamp": {"$first": "$timestamp"},
+            "commandCount": {"$sum": 1},
+            "sessions": {"$addToSet": "$session_id"},
+            "skills": {"$push": "$behavior_analysis.skill_level"},
+            "intents": {"$push": "$behavior_analysis.intent"}
+        }}
+    ]
+
+    results = list(db.commands.aggregate(pipeline))
+
     geo_results = []
-    for ip, data in ip_data.items():
-        # Get geographic location (real or simulated)
+    for r in results:
+        ip = r["_id"]
+
+        # Determine highest skill level
+        skill = "Low"
+        if "High" in r.get("skills", []):
+            skill = "High"
+        elif "Medium" in r.get("skills", []):
+            skill = "Medium"
+
+        # Determine most dangerous attack type
+        dangerous_intents = ["Privilege Escalation", "Exfiltration/Network", "Anti-Forensics"]
+        attack_type = "Unknown"
+        for intent in r.get("intents", []):
+            if intent in dangerous_intents:
+                attack_type = intent
+                break
+
+        # Resolve geo location
         geo = resolve_ip(ip)
-        
+
         geo_results.append({
-            'ip': data['ip'],
-            'country': geo['country'],
-            'city': geo['city'],
-            'latitude': geo['latitude'],
-            'longitude': geo['longitude'],
-            'timestamp': data['timestamp'],
-            'attackType': data['attackType'],
-            'commandCount': data['commandCount'],
-            'skillLevel': data['skillLevel'],
-            'sessionCount': len(data['sessions']),
-            'isSimulated': geo.get('source') == 'simulated'
+            "ip": ip,
+            "country": geo["country"],
+            "city": geo["city"],
+            "latitude": geo["latitude"],
+            "longitude": geo["longitude"],
+            "timestamp": r.get("timestamp", ""),
+            "attackType": attack_type,
+            "commandCount": r.get("commandCount", 0),
+            "skillLevel": skill,
+            "sessionCount": len(r.get("sessions", [])),
+            "isSimulated": geo.get("source") == "simulated"
         })
-    
-    # Sort by command count (most active attackers first)
-    geo_results.sort(key=lambda x: x['commandCount'], reverse=True)
-    
+
+    # Sort by command count (most active first)
+    geo_results.sort(key=lambda x: x["commandCount"], reverse=True)
+
     return jsonify(geo_results)
 
 
+# =========================================================================
+# RUN SERVER
+# =========================================================================
+
 if __name__ == '__main__':
-    print("[*] Starting Honeypot API Server...")
+    print("[*] Starting Honeypot API Server (MongoDB)...")
     print("[*] API available at http://localhost:5000")
     print("[*] Endpoints:")
     print("    GET /api/health")
@@ -358,6 +434,8 @@ if __name__ == '__main__':
     print("    GET /api/commands/frequency")
     print("    GET /api/analytics/risk-distribution")
     print("    GET /api/analytics/timeline")
+    print("    GET /api/analytics/skill-distribution")
     print("    GET /api/session/<id>/replay")
+    print("    GET /api/recordings")
     print("    GET /api/attacks/geo")
     app.run(host='0.0.0.0', port=5000, debug=True)

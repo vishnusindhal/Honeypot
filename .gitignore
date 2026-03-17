@@ -59,3 +59,11 @@ Thumbs.db
 *.tmp
 *.temp
 .cache/
+
+# Old Data Files
+honeypot_audit.json
+session_recordings/
+
+# Virtual Environment
+.venv/
+__pycache__/
