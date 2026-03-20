@@ -76,6 +76,7 @@ def handle_connection(client, addr):
         chan.close()
         return
 
+
     # Start Honeypot Session
     username = transport.get_username()
     session = HoneypotSession(client_ip=addr[0], username=username)
