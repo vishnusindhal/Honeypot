@@ -40,6 +40,7 @@ class DeceptionEngine:
         self._derive_intent(cmd_str)
         return self.skill_level, self.intent
 
+
     def get_response_delay(self):
         """
         Get adaptive response delay based on attacker skill.
